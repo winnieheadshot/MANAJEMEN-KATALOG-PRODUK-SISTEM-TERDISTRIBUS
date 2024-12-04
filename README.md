@@ -26,6 +26,8 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
+Implementasi dimulai dengan menyiapkan lingkungan pengembangan yang terisolasi menggunakan Python virtual environment. Hal ini penting untuk menghindari konflik dependensi antar proyek. Virtual environment dibuat menggunakan perintah `python -m venv venv` dan diaktifkan melalui `.\venv\Scripts\activate` pada sistem Windows. Selanjutnya, instalasi dependensi dilakukan menggunakan `pip install -r requirements.txt` yang mencakup Flask 2.0.1, MySQL connector, dan pustaka pendukung lainnya.
+
 ### 1. Konfigurasi Database
 
 ```
@@ -52,6 +54,8 @@ CREATE TABLE api_keys (
 );
 ```
 
+Struktur database dirancang untuk mendukung dua entitas utama: produk dan API key. Tabel `products` menyimpan informasi produk dengan kolom id (auto-increment), nama, kategori, harga (decimal untuk akurasi), dan deskripsi. Tabel `api_keys` dibuat untuk manajemen otentikasi dengan menyimpan key_value yang unik, nama klien, status aktif, dan timestamp pembuatan. Implementasi menggunakan MySQL sebagai RDBMS karena kemampuannya menangani transaksi dan relasi data.
+
 ### 2. Konfigurasi Environment
 
 ```
@@ -63,11 +67,15 @@ MYSQL_PASSWORD=
 MYSQL_DATABASE=product_catalog
 ```
 
+Konfigurasi aplikasi menggunakan pendekatan environment variables melalui file `.env` untuk meningkatkan keamanan dan fleksibilitas deployment. Variabel konfigurasi mencakup SECRET_KEY untuk session Flask, kredensial database, dan mode debug. Implementasi menggunakan python-dotenv untuk memuat konfigurasi secara otomatis saat aplikasi dijalankan.
+
 ### 3. Menjalankan Server
 
 ```
 python app.py
 ```
+
+REST API diimplementasikan menggunakan Flask dengan prinsip-prinsip RESTful: stateless, resource-based URLs, dan penggunaan metode HTTP yang tepat. Endpoint API dibagi menjadi dua kategori utama: manajemen API key dan operasi CRUD produk. Setiap endpoint dilengkapi decorator `@require_api_key` untuk otentikasi dan `@db_connection` untuk manajemen koneksi database.
 
 ### 4. Mendapatkan API Key
 
@@ -79,6 +87,8 @@ curl -X POST http://localhost:5000/api/keys \
 -d "{\"client_name\":\"client1\"}"
 ```
 
+Klien API diimplementasikan dalam class `ProductAPI` yang menyediakan metode-metode untuk berinteraksi dengan server. Implementasi mencakup penanganan error, validasi response, dan konversi tipe data. Klien menggunakan requests library untuk komunikasi HTTP dan menyertakan API key dalam header setiap request
+
 ### 5. Mengakses API dari Perangkat Lain
 
 #### a. Install Dependencies di Perangkat Client
@@ -86,6 +96,8 @@ curl -X POST http://localhost:5000/api/keys \
 ```
 pip install requests
 ```
+
+Akses dari perangkat lain difasilitasi melalui client Python yang menggunakan library requests. Client dikonfigurasi dengan IP server dan API key, menyertakan header `X-API-Key` pada setiap request. Implementasi mencakup penanganan error dan validasi response
 
 #### b. Gunakan Script Client
 
@@ -104,6 +116,8 @@ if client.test_connection():
     products = client.get_products()
     print(products)
 ```
+
+Pengujian dilakukan secara menyeluruh mencakup unit testing untuk komponen server dan client, serta integration testing untuk memverifikasi interaksi antar komponen. Framework pytest digunakan dengan fokus pada validasi autentikasi API key, operasi CRUD produk, dan penanganan error. Seluruh sistem menerapkan prinsip REST dengan endpoint terstruktur, autentikasi stateless, dan format data JSON.
 
 ## Endpoint API yang Tersedia
 
@@ -150,6 +164,8 @@ X-API-Key: your_api_key_here
 * Menggunakan API key untuk autentikasi
 * CORS enabled untuk akses cross-origin
 * Rate limiting (opsional)
+
+Keamanan sistem ditangani melalui multiple layer: API key authentication, CORS policy untuk akses cross-origin, dan proper error handling. Logging diimplementasi untuk monitoring dan troubleshooting. Dokumentasi lengkap disediakan dalam README.md, mencakup setup, penggunaan API, dan panduan troubleshooting.
 
 ## Pengujian
 
