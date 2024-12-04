@@ -2,10 +2,25 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from mysql.connector import Error
 import database as db
 import logging
+import secrets
 from functools import wraps
 from werkzeug.exceptions import BadRequest
 import os
 from dotenv import load_dotenv
+from flask_cors import CORS
+import secrets
+from decimal import Decimal
+import json
+from datetime import datetime
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 
 # Load environment variables
 load_dotenv()
@@ -14,9 +29,19 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 app = Flask(__name__)
+app.json_encoder = CustomJSONEncoder
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE"],
+        "allow_headers": ["Content-Type", "X-API-Key"]
+    }
+})
 app.secret_key = os.getenv('SECRET_KEY', 'default_secret_key')
 
+# Decorators
 class DatabaseConnectionError(Exception):
     pass
 
@@ -35,6 +60,34 @@ def db_connection(f):
             if conn and conn.is_connected():
                 conn.close()
     return decorated_function
+
+def require_api_key(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        api_key = request.headers.get('X-API-Key')
+        if not api_key:
+            return jsonify({'error': 'API key missing'}), 401
+            
+        conn = None
+        try:
+            conn = db.get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute('SELECT * FROM api_keys WHERE key_value = %s AND is_active = 1', (api_key,))
+            key_data = cursor.fetchone()
+            
+            if not key_data:
+                return jsonify({'error': 'Invalid API key'}), 401
+                
+            return f(*args, **kwargs)
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+    return decorated_function
+
+# Helper Functions
+def generate_api_key():
+    return secrets.token_hex(32)
 
 # Web Routes
 @app.route('/')
@@ -143,9 +196,35 @@ def search(conn):
     return render_template('index.html', products=products)
 
 # API Routes
-@app.route('/api/products', methods=['GET'])
+@app.route('/api/keys', methods=['POST'])
 @db_connection
-def get_products(conn):
+def create_api_key(conn):
+    if not request.is_json:
+        return jsonify({'error': 'Content-Type must be application/json'}), 400
+        
+    data = request.get_json()
+    if 'client_name' not in data:
+        return jsonify({'error': 'client_name is required'}), 400
+
+        
+    api_key = generate_api_key()
+    cursor = conn.cursor()
+    cursor.execute(
+        'INSERT INTO api_keys (key_value, client_name) VALUES (%s, %s)',
+        (api_key, data['client_name'])
+    )
+    conn.commit()
+    cursor.close()
+    
+    return jsonify({
+        'api_key': api_key,
+        'message': 'API key generated successfully'
+    }), 201
+
+@app.route('/api/products', methods=['GET'])
+@require_api_key
+@db_connection
+def get_products_api(conn):
     cursor = conn.cursor(dictionary=True)
     cursor.execute('SELECT * FROM products')
     products = cursor.fetchall()
@@ -153,8 +232,9 @@ def get_products(conn):
     return jsonify({'products': products})
 
 @app.route('/api/products/<int:id>', methods=['GET'])
+@require_api_key
 @db_connection
-def get_product(conn, id):
+def get_product_api(conn, id):
     cursor = conn.cursor(dictionary=True)
     cursor.execute('SELECT * FROM products WHERE id = %s', (id,))
     product = cursor.fetchone()
@@ -165,10 +245,11 @@ def get_product(conn, id):
     return jsonify({'product': product})
 
 @app.route('/api/products', methods=['POST'])
+@require_api_key
 @db_connection
-def create_product(conn):
+def create_product_api(conn):
     if not request.is_json:
-        raise BadRequest("Content-Type must be application/json")
+        return jsonify({'error': 'Content-Type must be application/json'}), 400
         
     data = request.get_json()
     required_fields = ['name', 'category', 'price']
@@ -195,6 +276,7 @@ def create_product(conn):
         return jsonify({'error': 'Invalid price value'}), 400
 
 @app.route('/api/products/<int:id>', methods=['PUT'])
+@require_api_key
 @db_connection
 def update_product_api(conn, id):
     if not request.is_json:
@@ -230,6 +312,7 @@ def update_product_api(conn, id):
     return jsonify({'message': 'Product updated successfully'})
 
 @app.route('/api/products/<int:id>', methods=['DELETE'])
+@require_api_key
 @db_connection
 def delete_product_api(conn, id):
     cursor = conn.cursor()
@@ -245,6 +328,7 @@ def delete_product_api(conn, id):
     
     return jsonify({'message': 'Product deleted successfully'})
 
+# Error Handlers
 @app.errorhandler(404)
 def not_found_error(error):
     return jsonify({'error': 'Not found'}), 404
@@ -255,4 +339,8 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true')
+    app.run(
+        host='0.0.0.0',  # Allow external access
+        port=5000,
+        debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    )
