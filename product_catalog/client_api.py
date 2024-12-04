@@ -32,7 +32,7 @@ class ProductAPI:
             print(f"Headers: {self.headers}")
             
             response = requests.get(
-                f'{self.base_url}/api/products',
+                f'{self.base_url}/api/products/3',
                 headers=self.headers
             )
             print(f"Status Code: {response.status_code}")
@@ -51,7 +51,7 @@ class ProductAPI:
             return {'error': f'Invalid JSON response: {str(e)}'}
 
 if __name__ == '__main__':
-    SERVER_IP = '192.168.137.172'
+    SERVER_IP = 'localhost'
     API_KEY = '44c64a2dd91188892dc7a07bf7d671025be04747f9c3fcac28b1c0f7894a8321'
 
     api = ProductAPI(SERVER_IP, API_KEY)

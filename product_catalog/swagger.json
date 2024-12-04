@@ -1,0 +1,231 @@
+{
+    "swagger": "2.0",
+    "basePath": "/",
+    "paths": {
+      "/api/keys": {
+        "post": {
+          "responses": {
+            "201": {
+              "description": "Success",
+              "schema": {
+                "$ref": "#/definitions/APIKeyResponse"
+              }
+            }
+          },
+          "summary": "Generate new API key",
+          "operationId": "create_api_key",
+          "parameters": [
+            {
+              "name": "payload",
+              "required": true,
+              "in": "body",
+              "schema": {
+                "$ref": "#/definitions/APIKey"
+              }
+            },
+            {
+              "name": "X-Fields",
+              "in": "header",
+              "type": "string",
+              "format": "mask",
+              "description": "An optional fields mask"
+            }
+          ],
+          "tags": [
+            "api"
+          ]
+        }
+      },
+      "/api/products": {
+        "get": {
+          "responses": {
+            "200": {
+              "description": "Success",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Product"
+                }
+              }
+            }
+          },
+          "summary": "List all products",
+          "operationId": "list_products",
+          "parameters": [
+            {
+              "name": "X-Fields",
+              "in": "header",
+              "type": "string",
+              "format": "mask",
+              "description": "An optional fields mask"
+            }
+          ],
+          "security": [
+            {
+              "apikey": []
+            }
+          ],
+          "tags": [
+            "api"
+          ]
+        },
+        "post": {
+          "responses": {
+            "201": {
+              "description": "Product created"
+            }
+          },
+          "summary": "Create a new product",
+          "operationId": "create_product",
+          "parameters": [
+            {
+              "name": "payload",
+              "required": true,
+              "in": "body",
+              "schema": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          ],
+          "security": [
+            {
+              "apikey": []
+            }
+          ],
+          "tags": [
+            "api"
+          ]
+        }
+      },
+      "/api/products/{id}": {
+        "parameters": [
+          {
+            "in": "path",
+            "description": "The product identifier",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "get": {
+          "responses": {
+            "200": {
+              "description": "Success",
+              "schema": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          },
+          "summary": "Get a product by ID",
+          "operationId": "get_product",
+          "parameters": [
+            {
+              "name": "X-Fields",
+              "in": "header",
+              "type": "string",
+              "format": "mask",
+              "description": "An optional fields mask"
+            }
+          ],
+          "security": [
+            {
+              "apikey": []
+            }
+          ],
+          "tags": [
+            "api"
+          ]
+        }
+      }
+    },
+    "info": {
+      "title": "Product Catalog API",
+      "version": "1.0",
+      "description": "API for managing product catalog"
+    },
+    "produces": [
+      "application/json"
+    ],
+    "consumes": [
+      "application/json"
+    ],
+    "securityDefinitions": {
+      "apikey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "tags": [
+      {
+        "name": "api",
+        "description": "Product operations"
+      }
+    ],
+    "definitions": {
+      "Product": {
+        "required": [
+          "category",
+          "name",
+          "price"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Product identifier",
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "category": {
+            "type": "string",
+            "description": "Product category"
+          },
+          "price": {
+            "type": "number",
+            "description": "Product price"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description"
+          }
+        },
+        "type": "object"
+      },
+      "APIKey": {
+        "required": [
+          "client_name"
+        ],
+        "properties": {
+          "client_name": {
+            "type": "string",
+            "description": "Client name"
+          }
+        },
+        "type": "object"
+      },
+      "APIKeyResponse": {
+        "properties": {
+          "api_key": {
+            "type": "string",
+            "description": "Generated API key"
+          },
+          "message": {
+            "type": "string",
+            "description": "Response message"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "responses": {
+      "ParseError": {
+        "description": "When a mask can't be parsed"
+      },
+      "MaskError": {
+        "description": "When any error occurs on mask"
+      }
+    }
+  }

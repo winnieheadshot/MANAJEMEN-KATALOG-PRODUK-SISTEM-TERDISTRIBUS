@@ -1,0 +1,29 @@
+# 1. Generate API Key
+curl -X POST ^
+-H "Content-Type: application/json" ^
+-d "{\"client_name\":\"cli_user\"}" ^
+http://localhost:5000/api/keys
+
+# 2. List Products
+curl -X GET http://localhost:5000/api/products `
+-H "X-API-Key: YOUR_API_KEY_HERE"
+
+# 3. Get Single Product
+curl -X GET http://localhost:5000/api/products/1 `
+-H "X-API-Key: YOUR_API_KEY_HERE"
+
+# 4. Create Product
+curl -X POST http://localhost:5000/api/products `
+-H "Content-Type: application/json" `
+-H "X-API-Key: YOUR_API_KEY_HERE" `
+-d "{\"name\":\"Test Product\",\"category\":\"Electronics\",\"price\":99.99,\"description\":\"Test\"}"
+
+# 5. Update Product
+curl -X PUT http://localhost:5000/api/products/1 `
+-H "Content-Type: application/json" `
+-H "X-API-Key: YOUR_API_KEY_HERE" `
+-d "{\"name\":\"Updated Product\",\"price\":199.99}"
+
+# 6. Delete Product
+curl -X DELETE http://localhost:5000/api/products/1 `
+-H "X-API-Key: YOUR_API_KEY_HERE"

@@ -338,6 +338,124 @@ def internal_error(error):
     logger.error(f"Internal server error: {error}")
     return jsonify({'error': 'Internal server error'}), 500
 
+from flask_restx import Api, Resource, fields, Namespace
+
+# Initialize API
+api = Api(app, 
+    version='1.0', 
+    title='Product Catalog API',
+    description='API for managing product catalog',
+    doc='/docs'
+)
+
+# Create namespace
+ns = api.namespace('api', description='Product operations')
+
+# Define models
+product_model = api.model('Product', {
+    'id': fields.Integer(readonly=True, description='Product identifier'),
+    'name': fields.String(required=True, description='Product name'),
+    'category': fields.String(required=True, description='Product category'),
+    'price': fields.Float(required=True, description='Product price'),
+    'description': fields.String(description='Product description')
+})
+
+api_key_model = api.model('APIKey', {
+    'client_name': fields.String(required=True, description='Client name'),
+})
+
+api_key_response = api.model('APIKeyResponse', {
+    'api_key': fields.String(description='Generated API key'),
+    'message': fields.String(description='Response message')
+})
+
+# Document API endpoints
+@ns.route('/products')
+class ProductList(Resource):
+    @ns.doc('list_products', security='apikey')
+    @ns.marshal_list_with(product_model)
+    @require_api_key
+    @db_connection
+    def get(self, conn):
+        """List all products"""
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM products')
+        products = cursor.fetchall()
+        cursor.close()
+        return products
+
+    @ns.doc('create_product', security='apikey')
+    @ns.expect(product_model)
+    @ns.response(201, 'Product created')
+    @require_api_key
+    @db_connection
+    def post(self, conn):
+        """Create a new product"""
+        data = request.json
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO products (name, category, price, description) VALUES (%s, %s, %s, %s)',
+            (data['name'], data['category'], data['price'], data.get('description', ''))
+        )
+        product_id = cursor.lastrowid
+        conn.commit()
+        cursor.close()
+        return {'message': 'Product created', 'id': product_id}, 201
+
+@ns.route('/products/<int:id>')
+@ns.param('id', 'The product identifier')
+class Product(Resource):
+    @ns.doc('get_product', security='apikey')
+    @ns.marshal_with(product_model)
+    @require_api_key
+    @db_connection
+    def get(self, conn, id):
+        """Get a product by ID"""
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute('SELECT * FROM products WHERE id = %s', (id,))
+        product = cursor.fetchone()
+        cursor.close()
+        if not product:
+            api.abort(404, f"Product {id} not found")
+        return product
+
+@ns.route('/keys')
+class APIKey(Resource):
+    @ns.doc('create_api_key')
+    @ns.expect(api_key_model)
+    @ns.marshal_with(api_key_response, code=201)
+    def post(self):
+        """Generate new API key"""
+        data = request.json
+        if 'client_name' not in data:
+            api.abort(400, "client_name is required")
+        
+        api_key = generate_api_key()
+        conn = db.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO api_keys (key_value, client_name) VALUES (%s, %s)',
+            (api_key, data['client_name'])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return {
+            'api_key': api_key,
+            'message': 'API key generated successfully'
+        }, 201
+
+# Configure security
+authorizations = {
+    'apikey': {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'X-API-Key'
+    }
+}
+api.authorizations = authorizations
+
 if __name__ == '__main__':
     app.run(
         host='0.0.0.0',  # Allow external access

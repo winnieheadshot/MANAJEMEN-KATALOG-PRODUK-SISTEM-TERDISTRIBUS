@@ -1,0 +1,61 @@
+GENERATE API KEY:
+
+curl -X POST \
+-H "Content-Type: application/json" \
+-d '{"client_name":"cli_user"}' \
+http://192.168.0.110:5000/api/keys
+
+
+LIST ALL PRODUCT:
+
+curl -X GET \
+-H "X-API-Key: YOUR_API_KEY_HERE" \
+http://192.168.0.110:5000/api/products
+
+
+GET SINGLE PRODUCT:
+
+curl -X GET \
+-H "X-API-Key: YOUR_API_KEY_HERE" \
+http://192.168.0.110:5000/api/products/1
+
+
+CREATE PRODUCT:
+
+
+curl -X POST \
+-H "Content-Type: application/json" \
+-H "X-API-Key: YOUR_API_KEY_HERE" \
+-d '{
+    "name": "Test Product",
+    "category": "Electronics",
+    "price": 99.99,
+    "description": "Test Description"
+}' \
+http://192.168.0.110:5000/api/products
+
+
+
+UPDATE PRODUCT:
+
+
+curl -X PUT \
+-H "Content-Type: application/json" \
+-H "X-API-Key: YOUR_API_KEY_HERE" \
+-d '{
+    "name": "Updated Product",
+    "category": "Electronics",
+    "price": 199.99,
+    "description": "Updated Description"
+}' \
+http://192.168.0.110:5000/api/products/1
+
+
+
+DELETE PRODUCT:
+
+
+
+curl -X DELETE \
+-H "X-API-Key: YOUR_API_KEY_HERE" \
+http://192.168.0.110:5000/api/products/1
