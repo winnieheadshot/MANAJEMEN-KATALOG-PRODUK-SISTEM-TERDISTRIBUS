@@ -1,6 +1,7 @@
 # MANAJEMEN KATALOG PRODUK SISTEM TERDISTRIBUSI
 
-## Deskripsi
+## Deskripsi 
+# dibuat oleh brata
 
 Sistem manajemen katalog produk berbasis REST API yang memungkinkan akses dari berbagai perangkat dengan autentikasi API key.
 
